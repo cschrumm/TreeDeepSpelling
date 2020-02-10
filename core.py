@@ -1,3 +1,5 @@
+import random
+
 class WordManage():
     def load(self,flnm):
         self._wrds = {}
@@ -27,4 +29,5 @@ class WordManage():
         return
     
     def set_category(self,wrd,vlu):
-        self._wrds[w
+        self._wrds[wrd] = vlu
+        return
