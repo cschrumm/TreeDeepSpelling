@@ -43,3 +43,72 @@ class WordManage():
     # number of words
     def word_count(self):
         return len(self._wrds.keys())
+    
+def load_keys():
+    kvy = None
+    with open("encoding_keys.json","r") as fl:
+        data = fl.read()
+        kyv = json.loads(data)
+        
+    return kyv
+
+
+def encode_word_keys(txt,k1,k2,k3):
+    c,c2,c3 = "","",""
+    WIDTH = 256
+    lyr = np.zeros((3,WIDTH))
+    txt = txt.lower()
+    ln = len(txt)
+    
+    if ln > WIDTH - 1:
+        raise Exception("text to long..")
+        
+    strt = int((WIDTH/2)-(ln/2))    
+    
+    for c in txt:
+        if not c in ky:
+            c2 = ""
+            c3 = ""
+            strt = strt + 1
+            continue
+        #print(c, " = ", math.log(k1[c]))
+        lyr[1][strt] = math.log(k1[c])/(-7.0)
+       
+        #enc.append(math.log(k1[c])/(-7.0))
+        c2 = c2 + c
+        c3 = c3 + c
+        if len(c2) > 2:
+            c2 = c2[1:]
+        if len(c3) > 3:
+            c3 = c3[1:]
+        
+        if len(c2) == 2 and math.log(k2[c2]) < -5.5:
+            vl = math.log(k2[c2]) / (-15.0)
+            #print("somewhat rare",c2, " = ",math.log(k2[c2]), " vl = ",vl)
+            lyr[0][strt-1] = lyr[0][strt-1] + vl
+            lyr[0][strt] = lyr[0][strt] + vl
+            
+            #enc.append(math.log(k2[c2])/(-15.0))
+        
+        if len(c3) == 3 and math.log(k3[c3]) < -7.5:
+            vl = math.log(k3[c3]) / (-16.0)
+            #print("rare..",c3, " ", math.log(k3[c3]), " vl = ",vl)
+            lyr[2][strt-2] = lyr[2][strt-2] + vl
+            lyr[2][strt-1] = lyr[2][strt-1] + vl
+            lyr[2][strt] = lyr[2][strt]
+            #enc.append(math.log(k3[c3])/(-16.0))
+            
+        strt = strt + 1
+    return lyr
+
+
+ky_dct = None
+
+
+def encode_word(wrd):
+    global ky_dct
+    
+    if ky_dct is None:
+        ky_dct = load_keys()
+    
+    return encode_word_keys(wrd,ky_dct['ky'],ky_dct['ky2'],ky_dct['ky3'])
