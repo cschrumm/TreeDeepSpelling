@@ -1,6 +1,10 @@
 import random
 import pathlib
 import json
+import itertools
+import numpy as np
+import pickle
+import math
 
 # This class manages the list of words that are being trained..
 class WordManage():
