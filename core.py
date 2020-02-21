@@ -1,5 +1,6 @@
 import random
 import pathlib
+import json
 
 # This class manages the list of words that are being trained..
 class WordManage():
