@@ -75,7 +75,7 @@ def encode_word_keys(txt,k1,k2,k3):
     strt = int((WIDTH/2)-(ln/2))    
     
     for c in txt:
-        if not c in ky:
+        if not c in k1:
             c2 = ""
             c3 = ""
             strt = strt + 1
