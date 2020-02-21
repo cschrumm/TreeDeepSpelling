@@ -1,4 +1,5 @@
 import random
+import pathlib
 
 # This class manages the list of words that are being trained..
 class WordManage():
@@ -46,7 +47,10 @@ class WordManage():
     
 def load_keys():
     kvy = None
-    with open("encoding_keys.json","r") as fl:
+    pth = pathlib.Path(__file__).parent.absolute()
+    pth = pth + "/encoding_keys.json"
+    
+    with open(pth,"r") as fl:
         data = fl.read()
         kyv = json.loads(data)
         
