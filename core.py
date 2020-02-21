@@ -48,7 +48,7 @@ class WordManage():
 def load_keys():
     kvy = None
     pth = pathlib.Path(__file__).parent.absolute()
-    pth = pth + "/encoding_keys.json"
+    pth = str(pth) + "/encoding_keys.json"
     
     with open(pth,"r") as fl:
         data = fl.read()
