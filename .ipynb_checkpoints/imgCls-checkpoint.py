@@ -13,6 +13,17 @@ def pt_info(ot):
     print("Size: ",ot.size()," Data type: ", ot.dtype," Device: ",ot.device, " Requires grad: ", ot.requires_grad)
     return
 
+def custom_init_weights(m):
+    if type(m) == nn.Linear:
+        #torch.nn.init.xavier_uniform_(m.weight)
+        print('normal init..')
+        nn.init.normal_(m.weight)
+        nn.init.normal_(m.bias)
+    elif type(m) == nn.Conv2d:
+        nn.init.normal_(m.bias)
+    
+        
+
 class ImgNet(nn.Module):
     def __init__(self,Ctg):
         super(ImgNet, self).__init__()
@@ -26,6 +37,8 @@ class ImgNet(nn.Module):
         self.dropout2 = nn.Dropout2d(0.5)
         self.fc1 = nn.Linear(2048, 64)
         self.fc2 = nn.Linear(64, Ctg)
+        
+        
 
     def forward(self, x):
         x = self.conv1(x)

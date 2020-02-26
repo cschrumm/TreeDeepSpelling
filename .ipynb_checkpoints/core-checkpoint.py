@@ -5,6 +5,7 @@ import itertools
 import numpy as np
 import pickle
 import math
+import torch
 
 # This class manages the list of words that are being trained..
 class WordManage():
@@ -65,7 +66,7 @@ def load_keys():
 def encode_word_keys(txt,k1,k2,k3):
     c,c2,c3 = "","",""
     WIDTH = 256
-    lyr = np.zeros((3,WIDTH))
+    lyr = np.zeros((3,WIDTH),np.float32)
     txt = txt.lower()
     ln = len(txt)
     
@@ -121,3 +122,108 @@ def encode_word(wrd):
         ky_dct = load_keys()
     
     return encode_word_keys(wrd,ky_dct['ky'],ky_dct['ky2'],ky_dct['ky3'])
+
+
+def best_device():
+  return torch.device(type= "cuda" if torch.cuda.is_available() else "cpu")
+
+def tensor_info(tn):
+  return (tn.device,tn.shape,tn.dtype)
+
+def best_move(tn): 
+  return  tn.to(best_device())
+
+def numpy_to_tensor(nn_ar):
+    ar = torch.from_numpy(nn_ar)
+    ar = best_move(ar)
+    return ar
+
+def remove_letter(wd):
+    if len(wd) < 5:
+        return wd
+    cs = random.randint(0,len(wd)-1)
+    return wd[0:cs] + wd[cs+1:]
+
+def swap_letter(wd):
+    if len(wd) < 3:
+        return wd
+    cs = random.randint(0,len(wd)-2)
+    wd = [w for w in wd]
+    t = wd[cs]
+    wd[cs] = wd[cs+1]
+    wd[cs+1] = t
+    
+    tmp = ""
+    for w in wd:
+        tmp += w
+        
+    return tmp
+
+def change_letter(wd):    
+    if len(wd) < 4:
+        return wd
+    
+    alpha = ['a','b','c','d','e','f','g', \
+        'h','i','j','k','l','m','n','o','p','q','r', \
+        's','t','u','v','w','x','y','z']
+    cs = random.randint(0,len(wd)-1)
+
+    wd = [w for w in wd]
+    
+    wd[cs] = alpha[random.randint(0,25)]
+    
+    tmp = ""
+    for w in wd:
+        tmp += w
+        
+    return tmp
+
+def drop_letter(wd):
+    if len(wd) < 5:
+        return wd
+    cs = random.randint(0,len(wd)-2)
+    
+    wd = [w for w in wd]
+    
+    wd[cs] = ' '
+    
+    tmp = ""
+    for w in wd:
+        tmp += w
+        
+    return tmp   
+
+def add_letter(wd):
+    if len(wd) < 3:
+        return wd
+    
+    #print("add letter")
+    cs = random.randint(0,len(wd)-2)
+    
+    #wd = [w for w in wd]
+    
+    alpha = ['a','b','c','d','e','f','g', \
+        'h','i','j','k','l','m','n','o','p','q','r', \
+        's','t','u','v','w','x','y','z']
+    
+    #ln = len(wd)
+    wd = wd[0:cs] + alpha[random.randint(0,25)] + wd[cs:] 
+           
+    return wd 
+
+
+def word_mix(wd):
+    fc_ar = [remove_letter,swap_letter,change_letter,drop_letter,add_letter]
+    
+    wd = fc_ar[random.randint(0,4)](wd)
+    
+    if random.random() < 0.4:
+        wd = fc_ar[random.randint(0,4)](wd)
+        
+    if random.random() < 0.3:
+        wd = fc_ar[random.randint(0,4)](wd)
+        
+    if random.random() < 0.2:
+        wd = fc_ar[random.randint(0,4)](wd)
+        
+    return wd
