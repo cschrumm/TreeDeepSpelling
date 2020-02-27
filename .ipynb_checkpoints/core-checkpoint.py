@@ -230,6 +230,36 @@ def word_mix(wd):
         
     return wd
 
+
+def name_path(name):
+    return "./net_data/" + name + ".bin"
+
+def save_network(ntwrk,name):
+    nt_path = name_path(name)
+    torch.save(ntwrk.state_dict(),nt_path)
+    return
+
+def load_network(name):
+    nt_pth = name_path(name)
+    return torch.load(nt_pth)
+
+
+def get_category(ntwrk,wrds,btch=64):
+    ntwrk.eval()
+    tmp = []
+    with torch.no_grad():
+        for b in batch(wrds,btch):
+            #print(b)
+            bts = word_batch(b)
+            tn_bts = numpy_to_tensor(bts)
+            #print(tensor_info(tn_bts))
+            rslts = ntwrk(tn_bts)
+            rv = rslts.argmax(dim=1)
+            #print(rv)
+            tmp.append(rslts.argmax(dim=1).cpu().numpy())
+        
+    return np.concatenate(tmp,axis=0)
+
 def batch(iterable, n=1):
     l = len(iterable)
     for ndx in range(0, l, n):
@@ -258,3 +288,54 @@ def build_net_opt_schedule():
     optimizer = optim.Adadelta(ntwrk.parameters(), lr=1.0)
     scheduler = StepLR(optimizer, step_size=1, gamma=0.7)
     return (ntwrk,optimizer,scheduler)
+
+def build_choose_and_train(wrl):
+    out_num = 5
+    targ_arr = []
+    in_arr = []
+    wrds = choose_spread_combo(out_num, wrl)
+    
+    for en,v in enumerate(wrds):
+        targ_arr.append(en)
+        wrd = encode_word(v)
+        wrd = np.expand_dims(wrd,axis=0)
+        in_arr.append(wrd)
+        
+    for i in range(2000):
+        for en,v in enumerate(wrds):
+            targ_arr.append(en)
+            wd = word_mix(v)
+            wrd = encode_word(wd)
+            wrd = np.expand_dims(wrd,axis=0)
+            in_arr.append(wrd)
+    tn_in, tn_trg  = np.stack(in_arr),np.array(targ_arr,dtype=np.long)
+    
+    epoch = 7
+    example_size = len(targ_arr)
+    example_indexes = [x for x in range(example_size)]
+    
+    model, optimizer, scheduler = build_net_opt_schedule()
+    
+    for i in range(epoch):
+        for b in batch(example_indexes,128):
+            #print(b[0],b[-1])
+            
+            optimizer.zero_grad()
+            
+            data = tn_in[b[0]:b[-1]]
+            target = tn_trg[b[0]:b[-1]]
+            
+            data = numpy_to_tensor(data)
+            target = numpy_to_tensor(target)
+            
+            output = model(data)
+            
+            loss = F.nll_loss(output,target)
+            loss.backward()
+            
+            optimizer.step()
+            
+        scheduler.step()
+        print("finished  epoch ", (i+1))
+    
+    return model
