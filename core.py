@@ -7,6 +7,8 @@ import pickle
 import math
 import torch
 
+from imgCls import *
+
 # This class manages the list of words that are being trained..
 class WordManage():
     # load a file of words to train.
@@ -227,3 +229,32 @@ def word_mix(wd):
         wd = fc_ar[random.randint(0,4)](wd)
         
     return wd
+
+def batch(iterable, n=1):
+    l = len(iterable)
+    for ndx in range(0, l, n):
+        yield iterable[ndx:min(ndx + n, l)]
+        
+def total_string_distance(t):
+    tmp = []
+    for a,b in itertools.permutations(t,2):
+        tmp.append(jellyfish.damerau_levenshtein_distance(a,b) ** 2)        
+    return sum(tmp)
+
+def choose_spread_combo(nm,wrl):
+    bts = []
+    sms = []
+    for i in range(75):
+        t = wrl.choose_words(nm)
+        bts.append(t)
+        sms.append(total_string_distance(t))
+    # print(sms,np.argmax(sms))
+    return bts[np.argmax(sms)]
+            
+        
+def build_net_opt_schedule():
+    ntwrk = ImgNet(5)
+    ntwrk = best_move(ntwrk)
+    optimizer = optim.Adadelta(ntwrk.parameters(), lr=1.0)
+    scheduler = StepLR(optimizer, step_size=1, gamma=0.7)
+    return (ntwrk,optimizer,scheduler)
