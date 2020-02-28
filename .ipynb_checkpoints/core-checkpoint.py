@@ -7,6 +7,7 @@ import pickle
 import math
 import torch
 import jellyfish
+import pickle
 
 from imgCls import *
 
@@ -22,7 +23,7 @@ class WordManage():
     # choose n words from the list
     def choose_words(self,nm):
         lst = [wrd for wrd in self._wrds.keys()]
-        return random.sample(lst,nm)
+        return random.sample(lst,min(nm,len(lst)))
     
     # filter by a category
     def filter_list(self, category):
@@ -47,6 +48,9 @@ class WordManage():
     
     # sets a words category
     def set_category(self,wrd,vlu):
+        if not type(wrd)==str:
+            raise Exception("Bad set type",str(type(wrd)))
+            
         self._wrds[wrd] = vlu
         return
     
@@ -250,17 +254,23 @@ def load_data_into(model,name):
     model.eval()
     return
 
-def get_category(ntwrk,wrds,btch=64):
+def get_category(ntwrk,wrds,btch=64,dbg=False):
     ntwrk.eval()
     tmp = []
     with torch.no_grad():
         for b in batch(wrds,btch):
             #print(b)
+            if dbg:
+                print("batch.. ",b)
+                
             bts = word_batch(b)
             tn_bts = numpy_to_tensor(bts)
             #print(tensor_info(tn_bts))
             rslts = ntwrk(tn_bts)
-            rv = rslts.argmax(dim=1)
+            if dbg:
+                print("result..")
+                print(rslts)
+            #rv = rslts.argmax(dim=1)
             #print(rv)
             tmp.append(rslts.argmax(dim=1).cpu().numpy())
         
@@ -274,6 +284,9 @@ def batch(iterable, n=1):
 def word_batch(wrds):
     tmp = []
     for wr in wrds:
+        
+        #print(type(wr))
+        
         wrd = encode_word(wr)
         wrd = np.expand_dims(wrd,axis=0)
         tmp.append(wrd)
@@ -301,10 +314,10 @@ def build_net_opt_schedule():
     ntwrk = ImgNet(5)
     ntwrk = best_move(ntwrk)
     optimizer = optim.Adadelta(ntwrk.parameters(), lr=1.0)
-    scheduler = StepLR(optimizer, step_size=1, gamma=0.7)
+    scheduler = StepLR(optimizer, step_size=1, gamma=0.2)
     return (ntwrk,optimizer,scheduler)
 
-def build_choose_and_train(wrl):
+def build_choose_and_train(wrl,dbg=False):
     out_num = 5
     targ_arr = []
     in_arr = []
@@ -315,24 +328,34 @@ def build_choose_and_train(wrl):
         wrd = encode_word(v)
         wrd = np.expand_dims(wrd,axis=0)
         in_arr.append(wrd)
-        
+        if dbg:
+            print("word ",v," category ",en)
+      
+    
     for i in range(2000):
         for en,v in enumerate(wrds):
             targ_arr.append(en)
             wd = word_mix(v)
+            if dbg:
+                print("word ",v," mix ",wd," category ",en)
             wrd = encode_word(wd)
             wrd = np.expand_dims(wrd,axis=0)
             in_arr.append(wrd)
+            
+    if dbg:
+        print("length of input.. ",len(in_arr))
+        
     tn_in, tn_trg  = np.stack(in_arr),np.array(targ_arr,dtype=np.long)
     
-    epoch = 7
+    epoch = 150
+    
     example_size = len(targ_arr)
     example_indexes = [x for x in range(example_size)]
     
     model, optimizer, scheduler = build_net_opt_schedule()
     
     for i in range(epoch):
-        for b in batch(example_indexes,128):
+        for b in batch(example_indexes,256):
             #print(b[0],b[-1])
             
             optimizer.zero_grad()
@@ -355,4 +378,21 @@ def build_choose_and_train(wrl):
         scheduler.step()
         #print("finished  epoch ", (i+1))
     
+    if dbg:
+        model.eval()
+        with torch.no_grad():
+            
+            for b in batch(example_indexes,256):
+                data = tn_in[b[0]:b[-1]]
+                target = tn_trg[b[0]:b[-1]]
+                
+                data = numpy_to_tensor(data)
+                target = numpy_to_tensor(target)
+                output = model(data)
+                
+                # test_loss += F.nll_loss(output, target, reduction='sum').item()  # sum up batch loss
+                pred = output.argmax(dim=1, keepdim=True)  # get the index of the max log-probability
+                correct = pred.eq(target.view_as(pred)).sum().item()
+                
+                print("correct on batch.. ", (100.0 * correct) / len(b))
     return model
