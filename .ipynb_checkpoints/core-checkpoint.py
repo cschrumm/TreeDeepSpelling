@@ -6,6 +6,7 @@ import numpy as np
 import pickle
 import math
 import torch
+import jellyfish
 
 from imgCls import *
 
@@ -244,6 +245,11 @@ def load_network(name):
     return torch.load(nt_pth)
 
 
+def load_data_into(model,name):
+    model.load_state_dict(load_network(name))
+    model.eval()
+    return
+
 def get_category(ntwrk,wrds,btch=64):
     ntwrk.eval()
     tmp = []
@@ -264,6 +270,15 @@ def batch(iterable, n=1):
     l = len(iterable)
     for ndx in range(0, l, n):
         yield iterable[ndx:min(ndx + n, l)]
+        
+def word_batch(wrds):
+    tmp = []
+    for wr in wrds:
+        wrd = encode_word(wr)
+        wrd = np.expand_dims(wrd,axis=0)
+        tmp.append(wrd)
+        
+    return np.stack(tmp,axis=0)
         
 def total_string_distance(t):
     tmp = []
@@ -325,6 +340,8 @@ def build_choose_and_train(wrl):
             data = tn_in[b[0]:b[-1]]
             target = tn_trg[b[0]:b[-1]]
             
+            #print("training data ",data.shape)
+            
             data = numpy_to_tensor(data)
             target = numpy_to_tensor(target)
             
@@ -336,6 +353,6 @@ def build_choose_and_train(wrl):
             optimizer.step()
             
         scheduler.step()
-        print("finished  epoch ", (i+1))
+        #print("finished  epoch ", (i+1))
     
     return model
