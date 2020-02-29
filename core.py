@@ -491,4 +491,8 @@ def load_json(flnm):
     data = None
     with open(flnm,"r") as fl:
         data = fl.read()
-    return json.parse(data)
+    return json.loads(data)
+
+def display_im(im):
+    plt.figure(figsize=(25, 25),dpi=80)
+    plt.imshow(im)
