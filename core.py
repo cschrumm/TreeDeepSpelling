@@ -82,6 +82,12 @@ def encode_word_keys(txt,k1,k2,k3):
         
     strt = int((WIDTH/2)-(ln/2))    
     
+    mnv,mxv = min(k1.values()),max(k1.values())
+    
+    mnv2,mxv2 = min(k2.values()),max(k2.values())
+    
+    mnv3,mxv3 = min(k3.values()),max(k3.values())
+    
     for c in txt:
         if not c in k1:
             c2 = ""
@@ -89,9 +95,10 @@ def encode_word_keys(txt,k1,k2,k3):
             strt = strt + 1
             continue
         #print(c, " = ", math.log(k1[c]))
-        mnv,mxv = min(k1.values()),max(k1.values())
-        nv = -1 + (2.0 / (mxv - mnv)) * (k1[c] - mnv)
+        
+        nv = -2 + (4.0 / (mxv - mnv)) * (k1[c] - mnv)
         lyr[1][strt] = nv
+        
         #lyr[1][strt] = math.log(k1[c])/(-7.0)
        
         #enc.append(math.log(k1[c])/(-7.0))
@@ -102,16 +109,20 @@ def encode_word_keys(txt,k1,k2,k3):
         if len(c3) > 3:
             c3 = c3[1:]
         
-        if len(c2) == 2 and math.log(k2[c2]) < -5.5:
-            vl = math.log(k2[c2]) / (-15.0)
+        if len(c2) == 2: # and math.log(k2[c2]) < -5.5:
+            #vl = math.log(k2[c2]) / (-15.0)
             #print("somewhat rare",c2, " = ",math.log(k2[c2]), " vl = ",vl)
+            
+            vl = -1 + (2.0 / (mxv2 - mnv2)) * (k2[c2] - mnv2)
+            
             lyr[0][strt-1] = lyr[0][strt-1] + vl
             lyr[0][strt] = lyr[0][strt] + vl
             
             #enc.append(math.log(k2[c2])/(-15.0))
         
-        if len(c3) == 3 and math.log(k3[c3]) < -7.5:
-            vl = math.log(k3[c3]) / (-16.0)
+        if len(c3) == 3: # and math.log(k3[c3]) < -7.5:
+            #vl = math.log(k3[c3]) / (-16.0)
+            vl = -1 + (2.0 / (mxv3 - mnv3)) * (k3[c3] - mnv3)
             #print("rare..",c3, " ", math.log(k3[c3]), " vl = ",vl)
             lyr[2][strt-2] = lyr[2][strt-2] + vl
             lyr[2][strt-1] = lyr[2][strt-1] + vl
@@ -338,7 +349,7 @@ def build_choose_and_train(wrl,dbg=False,out_cat=5):
             print("word ",v," category ",en)
       
     
-    for i in range(1000):
+    for i in range(2000):
         for en,v in enumerate(wrds):
             targ_arr.append(en)
             wd = word_mix(v)
@@ -405,3 +416,79 @@ def build_choose_and_train(wrl,dbg=False,out_cat=5):
                 
                 print("correct on batch.. ", (100.0 * correct) / len(b))
     return model
+
+# rtTreeName contains the name of the network to load 
+# avWords (instance of WordManage) contains the list of available words.
+# wdDic contains the chosen words root network choice
+# maxDepth
+def train_and_choose(rtTreeName, avWords, wdDic, maxDepth, btch_count):
+    '''
+    Note: Tree Name is the following format.. RootName_Subcategory_Subcategory_Subcategory_SubCategory
+           where subcategory is a number 0 to 4
+    1. Choose N words from avWords min(300,avWords.count)
+    2. Create a new instance of get_network with rtTreeName
+    3. For the chosen words do the following
+        A. find out the category 1 through (category_count) of the words
+        B. Now for train_batch count modify all the words using the initially selected
+           word as the target.
+    4. Now for all words in avWords assign them to on of the (categor_count) categories
+    5. Save the network.
+    6. If maxDepth <= 1 return..
+    7. For 1 to (cagtegory_count) number of categories:
+            maxDepth = maxDepth - 1
+            A. Select all the elements of chosen category from the avWords.filter_cat(category)
+               and append them to a new instance of avWords
+            B. If there is more then one element in a category...
+               B1. Recursively call train_and_choose with new avWords category and the sub network
+                   name netname_ + category_number
+            
+    '''
+    print("train tree..")
+    mdl = build_choose_and_train(avWords)
+   
+    # write the code to save the model..
+    save_network(mdl,rtTreeName)
+
+    all_wrds = avWords.all_words()
+
+    #print(type(all_wrds),"      ",type(all_wrds[0]))
+
+    cat_w = get_category(mdl,all_wrds)
+
+    for i,wrd in enumerate(all_wrds):
+        #print(wrd,"  ",cat_w[i])
+        avWords.set_category(wrd,cat_w[i])
+   
+    if maxDepth <= 0:
+        print("max depth exceeded..")
+        return
+
+    for i in range(5):
+        sb_tree = rtTreeName + "_" + str(i)
+        nw_wrl = avWords.filter_list(i)
+        
+        for w in nw_wrl.all_words():
+            wdDic[w] = sb_tree
+    
+        print("category ",i," total word count ",len(nw_wrl.all_words()))
+    
+        # recurse..
+        wrds = nw_wrl.all_words()
+        if len(wrds) > 1:
+            # recurse..
+            print("recursing on ",sb_tree," total words.. ", len(wrds))    
+            if len(wrds) < 5:
+                print("Words..",wrds)
+            train_and_choose(sb_tree, nw_wrl, wdDic, maxDepth - 1, btch_count)
+    return
+
+def save_json(sjn,flnm):
+    data = json.dumps(sjn)
+    with open(flnm,"w") as fl:
+        fl.write(data)
+    return
+def load_json(flnm):
+    data = None
+    with open(flnm,"r") as fl:
+        data = fl.read()
+    return json.parse(data)
