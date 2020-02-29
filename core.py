@@ -496,3 +496,31 @@ def load_json(flnm):
 def display_im(im):
     plt.figure(figsize=(25, 25),dpi=80)
     plt.imshow(im)
+
+def spell_word(wrd,ntwrk_name,mmp,dr):     
+    
+    # load the network
+    mdl = best_move(ImgNet(5))
+       
+    fl = dr + "/" + ntwrk_name + ".bin"
+    
+    nt = torch.load(fl)
+
+    model.load_state_dict(nt)
+    model.eval()
+      
+    cats = get_category(mdl,[wrd])
+    
+    #print(cats)
+    sb_ntwrk = ntwrk_name + str(cats[0])
+
+    word = [k for k,v in mmp.items() if v == sb_ntwrk]
+    
+    if len(word) > 0:
+        return word
+    
+    nt_nm = dr  + ntwrk_name + ".bin"
+    if path.exists(nt_nm):
+        return spell_word(wrd,nt_nm,mpp,dr)
+    else:
+        return "Not found.."
