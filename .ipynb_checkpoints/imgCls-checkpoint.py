@@ -34,7 +34,7 @@ class ImgNet(nn.Module):
         self.conv1 = nn.Conv2d(1, 32, 2, 1)
         self.conv2 = nn.Conv2d(32, 16, 2, 1,padding=1)
         self.dropout1 = nn.Dropout2d(0.25)
-        self.dropout2 = nn.Dropout2d(0.5)
+        self.dropout2 = nn.Dropout2d(0.25)
         self.fc1 = nn.Linear(2048, 64)
         self.fc2 = nn.Linear(64, Ctg)
         

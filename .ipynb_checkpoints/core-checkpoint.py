@@ -89,7 +89,10 @@ def encode_word_keys(txt,k1,k2,k3):
             strt = strt + 1
             continue
         #print(c, " = ", math.log(k1[c]))
-        lyr[1][strt] = math.log(k1[c])/(-7.0)
+        mnv,mxv = min(k1.values()),max(k1.values())
+        nv = -1 + (2.0 / (mxv - mnv)) * (k1[c] - mnv)
+        lyr[1][strt] = nv
+        #lyr[1][strt] = math.log(k1[c])/(-7.0)
        
         #enc.append(math.log(k1[c])/(-7.0))
         c2 = c2 + c
@@ -221,16 +224,18 @@ def add_letter(wd):
 
 def word_mix(wd):
     fc_ar = [remove_letter,swap_letter,change_letter,drop_letter,add_letter]
+    #wd = wd
     
-    wd = fc_ar[random.randint(0,4)](wd)
+    if random.random() < 0.50:
+        wd = fc_ar[random.randint(0,4)](wd)
     
-    if random.random() < 0.4:
+    if random.random() < 0.30:
         wd = fc_ar[random.randint(0,4)](wd)
         
-    if random.random() < 0.3:
+    if random.random() < 0.20:
         wd = fc_ar[random.randint(0,4)](wd)
         
-    if random.random() < 0.2:
+    if random.random() < 0.1:
         wd = fc_ar[random.randint(0,4)](wd)
         
     return wd
@@ -310,14 +315,15 @@ def choose_spread_combo(nm,wrl):
     return bts[np.argmax(sms)]
             
         
-def build_net_opt_schedule():
-    ntwrk = ImgNet(5)
+def build_net_opt_schedule(out_cat=5):
+    ntwrk = ImgNet(out_cat)
     ntwrk = best_move(ntwrk)
-    optimizer = optim.Adadelta(ntwrk.parameters(), lr=1.0)
-    scheduler = StepLR(optimizer, step_size=1, gamma=0.2)
+    optimizer = optim.Adadelta(ntwrk.parameters(), lr=0.5)
+    scheduler = StepLR(optimizer, step_size=2, gamma=0.9)
+    
     return (ntwrk,optimizer,scheduler)
 
-def build_choose_and_train(wrl,dbg=False):
+def build_choose_and_train(wrl,dbg=False,out_cat=5):
     out_num = 5
     targ_arr = []
     in_arr = []
@@ -332,7 +338,7 @@ def build_choose_and_train(wrl,dbg=False):
             print("word ",v," category ",en)
       
     
-    for i in range(2000):
+    for i in range(1000):
         for en,v in enumerate(wrds):
             targ_arr.append(en)
             wd = word_mix(v)
@@ -341,18 +347,19 @@ def build_choose_and_train(wrl,dbg=False):
             wrd = encode_word(wd)
             wrd = np.expand_dims(wrd,axis=0)
             in_arr.append(wrd)
+                        
             
     if dbg:
         print("length of input.. ",len(in_arr))
         
     tn_in, tn_trg  = np.stack(in_arr),np.array(targ_arr,dtype=np.long)
     
-    epoch = 150
+    epoch = 50
     
     example_size = len(targ_arr)
     example_indexes = [x for x in range(example_size)]
     
-    model, optimizer, scheduler = build_net_opt_schedule()
+    model, optimizer, scheduler = build_net_opt_schedule(out_cat)
     
     for i in range(epoch):
         for b in batch(example_indexes,256):
@@ -376,6 +383,8 @@ def build_choose_and_train(wrl,dbg=False):
             optimizer.step()
             
         scheduler.step()
+        if dbg:
+            print("lr.. ",scheduler.get_lr())
         #print("finished  epoch ", (i+1))
     
     if dbg:
