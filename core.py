@@ -8,6 +8,7 @@ import math
 import torch
 import jellyfish
 import pickle
+from os import path
 
 from imgCls import *
 
@@ -349,7 +350,7 @@ def build_choose_and_train(wrl,dbg=False,out_cat=5):
             print("word ",v," category ",en)
       
     
-    for i in range(2000):
+    for i in range(1000):
         for en,v in enumerate(wrds):
             targ_arr.append(en)
             wd = word_mix(v)
@@ -365,7 +366,7 @@ def build_choose_and_train(wrl,dbg=False,out_cat=5):
         
     tn_in, tn_trg  = np.stack(in_arr),np.array(targ_arr,dtype=np.long)
     
-    epoch = 50
+    epoch = 30
     
     example_size = len(targ_arr)
     example_indexes = [x for x in range(example_size)]
@@ -497,7 +498,7 @@ def display_im(im):
     plt.figure(figsize=(25, 25),dpi=80)
     plt.imshow(im)
 
-def spell_word(wrd,ntwrk_name,mmp,dr):     
+def spell_word(wrd,ntwrk_name,mmp,dr, dbg=False):     
     
     # load the network
     mdl = best_move(ImgNet(5))
@@ -505,22 +506,33 @@ def spell_word(wrd,ntwrk_name,mmp,dr):
     fl = dr + "/" + ntwrk_name + ".bin"
     
     nt = torch.load(fl)
-
-    model.load_state_dict(nt)
-    model.eval()
+   
+    mdl.load_state_dict(nt)
+    mdl.eval()
       
-    cats = get_category(mdl,[wrd])
-    
-    #print(cats)
-    sb_ntwrk = ntwrk_name + str(cats[0])
+    cats = get_category(mdl,[wrd])    
+ 
+    if dbg:
+        print("category.. ",cats)
+        
+    sb_ntwrk = ntwrk_name + "_" +  str(cats[0])
 
     word = [k for k,v in mmp.items() if v == sb_ntwrk]
     
     if len(word) > 0:
+        if dbg:
+            for k,v in mmp.items():
+                if v == sb_ntwrk:
+                    print("key ",k, " value ", v)
         return word
     
-    nt_nm = dr  + ntwrk_name + ".bin"
+    nt_nm =  dr + "/" + sb_ntwrk + ".bin"
+    
     if path.exists(nt_nm):
-        return spell_word(wrd,nt_nm,mpp,dr)
+        if dbg:
+            print("traverse down.. ",nt_nm)
+        return spell_word(wrd,sb_ntwrk,mmp,dr,dbg)
     else:
+        if dbg:
+            print("network file not found. not found..")
         return "Not found.."
