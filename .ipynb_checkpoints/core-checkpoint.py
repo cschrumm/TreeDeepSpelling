@@ -506,7 +506,7 @@ def build_choose_and_train(wrl,dbg=False,out_cat=5):
         
         epoch = 5
     
-        for _ in range(250):
+        for _ in range(100):
             for i in range(out_cat):
                 #print("lenght list ",len(cat_list[i]))
                 lst = random.sample(cat_list[i], k=min(len(cat_list[i]),30))
@@ -521,6 +521,9 @@ def build_choose_and_train(wrl,dbg=False,out_cat=5):
             
         tn_in, tn_trg  = np.stack(in_arr),np.array(targ_arr,dtype=np.long)
     
+        if dbg:
+            print("input shape.. ",tn_in.shape)
+            
         train_loop(epoch,tn_in,tn_trg, model, optimizer, scheduler,dbg)
      
     
