@@ -12,6 +12,13 @@ from os import path
 
 from imgCls import *
 
+
+# a helper function..
+def pt_info(ot):
+    print("Size: ",ot.size()," Data type: ", ot.dtype," Device: ",ot.device, " Requires grad: ", ot.requires_grad)
+    return
+
+
 # This class manages the list of words that are being trained..
 class WordManage():
     # load a file of words to train.
@@ -170,16 +177,14 @@ def swap_letter(wd):
     if len(wd) < 3:
         return wd
     cs = random.randint(0,len(wd)-2)
-    wd = [w for w in wd]
+    wd = list(wd)
     t = wd[cs]
     wd[cs] = wd[cs+1]
     wd[cs+1] = t
     
     tmp = ""
-    for w in wd:
-        tmp += w
-        
-    return tmp
+            
+    return tmp.join(wd)
 
 def change_letter(wd):    
     if len(wd) < 4:
@@ -190,30 +195,27 @@ def change_letter(wd):
         's','t','u','v','w','x','y','z']
     cs = random.randint(0,len(wd)-1)
 
-    wd = [w for w in wd]
+    wd = list(wd)
     
     wd[cs] = alpha[random.randint(0,25)]
     
     tmp = ""
-    for w in wd:
-        tmp += w
-        
-    return tmp
+            
+    return tmp.join(tmp)
+
 
 def drop_letter(wd):
     if len(wd) < 5:
         return wd
     cs = random.randint(0,len(wd)-2)
     
-    wd = [w for w in wd]
+    wd = list(wd)
     
     wd[cs] = ' '
     
     tmp = ""
-    for w in wd:
-        tmp += w
         
-    return tmp   
+    return tmp.join(wd)
 
 def add_letter(wd):
     if len(wd) < 3:
@@ -269,6 +271,13 @@ def load_network(name):
 def load_data_into(model,name):
     model.load_state_dict(load_network(name))
     model.eval()
+    return
+
+
+def load_file_into_model(mdl,pth):
+    data = torch.load(pth)
+    mdl.load_state_dict(data)
+    mdl.eval()
     return
 
 def get_category(ntwrk,wrds,btch=64,dbg=False):
@@ -330,57 +339,23 @@ def choose_spread_combo(nm,wrl):
 def build_net_opt_schedule(out_cat=5):
     ntwrk = ImgNet(out_cat)
     ntwrk = best_move(ntwrk)
-    optimizer = optim.Adadelta(ntwrk.parameters(), lr=0.5)
-    scheduler = StepLR(optimizer, step_size=2, gamma=0.9)
+    optimizer = optim.Adadelta(ntwrk.parameters(), lr=0.80)
+    scheduler = StepLR(optimizer, step_size=1, gamma=0.98)
     
     return (ntwrk,optimizer,scheduler)
 
-def build_choose_and_train(wrl,dbg=False,out_cat=5):
-    out_num = 5
-    targ_arr = []
-    in_arr = []
-    wrds = choose_spread_combo(out_num, wrl)
+def train_loop(epoch,tn_in,tn_arg, model, optimizer, scheduler,dbg):   
     
-    for en,v in enumerate(wrds):
-        targ_arr.append(en)
-        wrd = encode_word(v)
-        wrd = np.expand_dims(wrd,axis=0)
-        in_arr.append(wrd)
-        if dbg:
-            print("word ",v," category ",en)
-      
-    
-    for i in range(1000):
-        for en,v in enumerate(wrds):
-            targ_arr.append(en)
-            wd = word_mix(v)
-            if dbg:
-                print("word ",v," mix ",wd," category ",en)
-            wrd = encode_word(wd)
-            wrd = np.expand_dims(wrd,axis=0)
-            in_arr.append(wrd)
-                        
-            
-    if dbg:
-        print("length of input.. ",len(in_arr))
-        
-    tn_in, tn_trg  = np.stack(in_arr),np.array(targ_arr,dtype=np.long)
-    
-    epoch = 30
-    
-    example_size = len(targ_arr)
+    example_size = tn_arg.shape[0]
     example_indexes = [x for x in range(example_size)]
-    
-    model, optimizer, scheduler = build_net_opt_schedule(out_cat)
-    
     for i in range(epoch):
-        for b in batch(example_indexes,256):
+        for b in batch(example_indexes,512):
             #print(b[0],b[-1])
             
             optimizer.zero_grad()
             
             data = tn_in[b[0]:b[-1]]
-            target = tn_trg[b[0]:b[-1]]
+            target = tn_arg[b[0]:b[-1]]
             
             #print("training data ",data.shape)
             
@@ -397,11 +372,90 @@ def build_choose_and_train(wrl,dbg=False,out_cat=5):
         scheduler.step()
         if dbg:
             print("lr.. ",scheduler.get_lr())
-        #print("finished  epoch ", (i+1))
+            
+
+def build_choose_and_train(wrl,dbg=False,out_cat=5):
+    out_num = 5
+    targ_arr = []
+    in_arr = []
+    wrds = choose_spread_combo(out_num, wrl)
+    
+    for en,v in enumerate(wrds):
+        targ_arr.append(en)
+        wrd = encode_word(v)
+        wrd = np.expand_dims(wrd,axis=0)
+        in_arr.append(wrd)
+        if dbg:
+            print("word ",v," category ",en)
+      
+    
+    for i in range(800):u
+        for en,v in enumerate(wrds):
+            targ_arr.append(en)
+            wd = word_mix(v)
+            #if dbg:
+            #    print("word ",v," mix ",wd," category ",en)
+            wrd = encode_word(wd)
+            wrd = np.expand_dims(wrd,axis=0)
+            in_arr.append(wrd)
+                        
+            
+    if dbg:
+        print("length of input.. ",len(in_arr))
+        
+    tn_in, tn_trg  = np.stack(in_arr),np.array(targ_arr,dtype=np.long)
+    
+    epoch = 7
+    
+    # example_size = len(targ_arr)
+    # example_indexes = [x for x in range(example_size)]
+    
+    model, optimizer, scheduler = build_net_opt_schedule(out_cat)
+    
+    train_loop(epoch,tn_in,tn_trg, model, optimizer, scheduler,dbg)
+    
+    
+    if dbg:
+        print("second half training..")
+    
+    # choose category based on the partially trained model..
+    
+    
+    for i in range(5):
+        all_wrds = wrl.all_words()
+        cat_w = get_category(model,all_wrds)
+    
+        #for i,ct in enumerate(cat_w):
+        cat_list = [[all_wrds[v] for v,ct in enumerate(cat_w) if ct == i ] for i in range(out_cat)]
+    
+        in_arr = []
+        targ_arr = []
+        
+        epoch = 10
+    
+        for _ in range(350):
+            for i in range(out_cat):
+                #print("lenght list ",len(cat_list[i]))
+                lst = random.sample(cat_list[i], k=min(len(cat_list[i]),30))
+                #print(len(lst))
+    
+                for w in lst:
+                    targ_arr.append(i)
+                    wd = word_mix(w)
+                    wrd = encode_word(wd)
+                    wrd = np.expand_dims(wrd,axis=0)
+                    in_arr.append(wrd)
+            
+        tn_in, tn_trg  = np.stack(in_arr),np.array(targ_arr,dtype=np.long)
+    
+        train_loop(epoch,tn_in,tn_trg, model, optimizer, scheduler,dbg)
+     
     
     if dbg:
         model.eval()
         with torch.no_grad():
+            example_size = tn_trg.shape[0]
+            example_indexes = [x for x in range(example_size)]
             
             for b in batch(example_indexes,256):
                 data = tn_in[b[0]:b[-1]]
@@ -418,48 +472,50 @@ def build_choose_and_train(wrl,dbg=False,out_cat=5):
                 print("correct on batch.. ", (100.0 * correct) / len(b))
     return model
 
+
 # rtTreeName contains the name of the network to load 
 # avWords (instance of WordManage) contains the list of available words.
 # wdDic contains the chosen words root network choice
 # maxDepth
-def train_and_choose(rtTreeName, avWords, wdDic, maxDepth, btch_count):
+def train_and_choose(rtTreeName, avWords, wdDic, maxDepth):
     '''
-    Note: Tree Name is the following format.. RootName_Subcategory_Subcategory_Subcategory_SubCategory
-           where subcategory is a number 0 to 4
-    1. Choose N words from avWords min(300,avWords.count)
-    2. Create a new instance of get_network with rtTreeName
-    3. For the chosen words do the following
-        A. find out the category 1 through (category_count) of the words
-        B. Now for train_batch count modify all the words using the initially selected
-           word as the target.
-    4. Now for all words in avWords assign them to on of the (categor_count) categories
-    5. Save the network.
-    6. If maxDepth <= 1 return..
-    7. For 1 to (cagtegory_count) number of categories:
-            maxDepth = maxDepth - 1
-            A. Select all the elements of chosen category from the avWords.filter_cat(category)
-               and append them to a new instance of avWords
-            B. If there is more then one element in a category...
-               B1. Recursively call train_and_choose with new avWords category and the sub network
-                   name netname_ + category_number
-            
+    
     '''
     print("train tree..")
     mdl = build_choose_and_train(avWords)
    
     # write the code to save the model..
+    
+    # saving the tree trained above.
     save_network(mdl,rtTreeName)
 
+    # get all the words to see there categories
     all_wrds = avWords.all_words()
 
-    #print(type(all_wrds),"      ",type(all_wrds[0]))
-
+    # find the categories for the words
     cat_w = get_category(mdl,all_wrds)
 
     for i,wrd in enumerate(all_wrds):
         #print(wrd,"  ",cat_w[i])
         avWords.set_category(wrd,cat_w[i])
-   
+        
+        
+    if len(all_wrds) < 5:
+        vv = -1
+        stp = True
+        for w in cat_w:
+            if vv == -1:
+                vv = w
+            elif not vv == w:                
+                stp = False
+                break
+                
+        if stp:
+            print("not seperating for words .. ", all_wrds)
+            return
+                
+        
+    # stops run away code and infinite recursion. Can't think of reason it should happen but..
     if maxDepth <= 0:
         print("max depth exceeded..")
         return
@@ -480,24 +536,29 @@ def train_and_choose(rtTreeName, avWords, wdDic, maxDepth, btch_count):
             print("recursing on ",sb_tree," total words.. ", len(wrds))    
             if len(wrds) < 5:
                 print("Words..",wrds)
-            train_and_choose(sb_tree, nw_wrl, wdDic, maxDepth - 1, btch_count)
+            train_and_choose(sb_tree, nw_wrl, wdDic, maxDepth - 1)
     return
 
+# saves a structure to file.
 def save_json(sjn,flnm):
     data = json.dumps(sjn)
     with open(flnm,"w") as fl:
         fl.write(data)
     return
+
+# load json to dictionary
 def load_json(flnm):
     data = None
     with open(flnm,"r") as fl:
         data = fl.read()
     return json.loads(data)
 
+# display the encoding image.
 def display_im(im):
     plt.figure(figsize=(25, 25),dpi=80)
     plt.imshow(im)
 
+# check word spelling.
 def spell_word(wrd,ntwrk_name,mmp,dr, dbg=False):     
     
     # load the network

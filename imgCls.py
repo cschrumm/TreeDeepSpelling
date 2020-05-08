@@ -3,15 +3,14 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torchvision import datasets, transforms
+#from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
 
 
-# taken from here: https://github.com/pytorch/examples/blob/master/mnist/main.py
 
-def pt_info(ot):
-    print("Size: ",ot.size()," Data type: ", ot.dtype," Device: ",ot.device, " Requires grad: ", ot.requires_grad)
-    return
+# initial network was from here: https://github.com/pytorch/examples/blob/master/mnist/main.py
+
+
 
 def custom_init_weights(m):
     if type(m) == nn.Linear:
