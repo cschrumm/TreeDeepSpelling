@@ -10,6 +10,8 @@ import jellyfish
 import pickle
 from os import path
 
+import os, shutil
+
 from imgCls import *
 
 
@@ -18,6 +20,53 @@ def pt_info(ot):
     print("Size: ",ot.size()," Data type: ", ot.dtype," Device: ",ot.device, " Requires grad: ", ot.requires_grad)
     return
 
+class DeepSpellingChecker:
+    #ky_dct = load_keys(dr_lc)
+    def __init__(self,encode_dir,net_dir):
+        self.encode_dir = encode_dir
+        self.net_dir = net_dir
+        self.ky_dct = load_keys(encode_dir)
+        self.mapp = None
+        return
+    def encode_image(self,wrd):
+        return encode_word(wrd,self.ky_dct)
+    def create_word_mistake(self,wrd):
+        return word_mix(wrd)
+    def can_use_gpu(self):
+        return torch.cuda.is_available()
+    def train_words(self,wrd_list):
+        rt_name = "mdl_spelling"
+        dcMapping = {}
+        maxDepth = 30
+        wrl = WordManage()
+        wrl.set_words(wrd_list,0)
+        # clean out the network directory
+        delete_files_dir(self.net_dir)
+        # 
+        train_and_choose(rt_name,wrl,dcMapping,maxDepth,self.net_dir)
+        
+        file_path = self.mapping_file()
+        
+        save_json(dcMapping,file_path)
+        
+        self.mapp = dcMapping
+        return 
+    
+    def mapping_file():
+        return  os.path.join(self.net_dir, "word_tree_mapping.json")
+    
+    def best_word_match(self,wrd,dbg=False):
+        
+        file_path = self.mapping_file()
+        
+        if self.mapp == None:
+            self.mapp = load_json(file_path)
+                
+        rt_name = "mdl_spelling"
+        
+        return spell_word(wrd,rt_name,self.mapp,self.net_dir, dbg)
+
+    
 
 # This class manages the list of words that are being trained..
 class WordManage():
@@ -66,17 +115,33 @@ class WordManage():
     def word_count(self):
         return len(self._wrds.keys())
     
-def load_keys():
+def load_keys(dr_loc=""):
     kvy = None
-    pth = pathlib.Path(__file__).parent.absolute()
-    pth = str(pth) + "/encoding_keys.json"
-    
+    pth = ""
+    if len(dr_loc) == 0:        
+        pth = pathlib.Path(__file__).parent.absolute()
+        pth = str(pth) + "/encoding_keys.json"
+    else:
+        pth = pth + "/encoding_keys.json"
+        
     with open(pth,"r") as fl:
         data = fl.read()
         kyv = json.loads(data)
         
     return kyv
 
+
+def delete_files_dir(folder):
+    for filename in os.listdir(folder):
+        file_path = os.path.join(folder, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            print('Failed to delete %s. Reason: %s' % (file_path, e))
+            
 
 def encode_word_keys(txt,k1,k2,k3):
     c,c2,c3 = "","",""
@@ -143,15 +208,13 @@ def encode_word_keys(txt,k1,k2,k3):
 
 ky_dct = None
 
-
-def encode_word(wrd):
-    global ky_dct
+def encode_word(wrd,ky_dct=None,dr_lc=""):
+    #global ky_dct
     
     if ky_dct is None:
-        ky_dct = load_keys()
+        ky_dct = load_keys(dr_lc)
     
     return encode_word_keys(wrd,ky_dct['ky'],ky_dct['ky2'],ky_dct['ky3'])
-
 
 def best_device():
   return torch.device(type= "cuda" if torch.cuda.is_available() else "cpu")
@@ -201,7 +264,7 @@ def change_letter(wd):
     
     tmp = ""
             
-    return tmp.join(tmp)
+    return tmp.join(wd)
 
 
 def drop_letter(wd):
@@ -258,13 +321,23 @@ def word_mix(wd):
 def name_path(name):
     return "./net_data/" + name + ".bin"
 
-def save_network(ntwrk,name):
-    nt_path = name_path(name)
+def save_network(ntwrk,name,pth=None):
+    
+    if pth==None:
+        nt_path = name_path(name)
+    else:
+        nt_path = os.path.join(pth, (name + ".bin"))
+        
     torch.save(ntwrk.state_dict(),nt_path)
     return
 
-def load_network(name):
-    nt_pth = name_path(name)
+def load_network(name,pth=None):
+    
+    if pth==None:
+        nt_path = name_path(name)
+    else:
+        nt_path = os.path.join(pth, filename)
+        
     return torch.load(nt_pth)
 
 
@@ -340,7 +413,7 @@ def build_net_opt_schedule(out_cat=5):
     ntwrk = ImgNet(out_cat)
     ntwrk = best_move(ntwrk)
     optimizer = optim.Adadelta(ntwrk.parameters(), lr=0.80)
-    scheduler = StepLR(optimizer, step_size=1, gamma=0.98)
+    scheduler = StepLR(optimizer, step_size=1, gamma=0.97)
     
     return (ntwrk,optimizer,scheduler)
 
@@ -389,7 +462,7 @@ def build_choose_and_train(wrl,dbg=False,out_cat=5):
             print("word ",v," category ",en)
       
     
-    for i in range(800):u
+    for i in range(500):
         for en,v in enumerate(wrds):
             targ_arr.append(en)
             wd = word_mix(v)
@@ -405,7 +478,7 @@ def build_choose_and_train(wrl,dbg=False,out_cat=5):
         
     tn_in, tn_trg  = np.stack(in_arr),np.array(targ_arr,dtype=np.long)
     
-    epoch = 7
+    epoch = 3
     
     # example_size = len(targ_arr)
     # example_indexes = [x for x in range(example_size)]
@@ -421,7 +494,7 @@ def build_choose_and_train(wrl,dbg=False,out_cat=5):
     # choose category based on the partially trained model..
     
     
-    for i in range(5):
+    for i in range(3):
         all_wrds = wrl.all_words()
         cat_w = get_category(model,all_wrds)
     
@@ -431,9 +504,9 @@ def build_choose_and_train(wrl,dbg=False,out_cat=5):
         in_arr = []
         targ_arr = []
         
-        epoch = 10
+        epoch = 5
     
-        for _ in range(350):
+        for _ in range(250):
             for i in range(out_cat):
                 #print("lenght list ",len(cat_list[i]))
                 lst = random.sample(cat_list[i], k=min(len(cat_list[i]),30))
@@ -477,7 +550,7 @@ def build_choose_and_train(wrl,dbg=False,out_cat=5):
 # avWords (instance of WordManage) contains the list of available words.
 # wdDic contains the chosen words root network choice
 # maxDepth
-def train_and_choose(rtTreeName, avWords, wdDic, maxDepth):
+def train_and_choose(rtTreeName, avWords, wdDic, maxDepth,pth=None):
     '''
     
     '''
@@ -487,7 +560,7 @@ def train_and_choose(rtTreeName, avWords, wdDic, maxDepth):
     # write the code to save the model..
     
     # saving the tree trained above.
-    save_network(mdl,rtTreeName)
+    save_network(mdl,rtTreeName,pth)
 
     # get all the words to see there categories
     all_wrds = avWords.all_words()
@@ -536,7 +609,7 @@ def train_and_choose(rtTreeName, avWords, wdDic, maxDepth):
             print("recursing on ",sb_tree," total words.. ", len(wrds))    
             if len(wrds) < 5:
                 print("Words..",wrds)
-            train_and_choose(sb_tree, nw_wrl, wdDic, maxDepth - 1)
+            train_and_choose(sb_tree, nw_wrl, wdDic, maxDepth - 1,pth)
     return
 
 # saves a structure to file.
@@ -564,7 +637,7 @@ def spell_word(wrd,ntwrk_name,mmp,dr, dbg=False):
     # load the network
     mdl = best_move(ImgNet(5))
        
-    fl = dr + "/" + ntwrk_name + ".bin"
+    fl =  os.path.join(dr, ntwrk_name) #dr + "/" + ntwrk_name + ".bin"
     
     nt = torch.load(fl)
    
