@@ -52,7 +52,7 @@ class DeepSpellingChecker:
         self.mapp = dcMapping
         return 
     
-    def mapping_file():
+    def mapping_file(self):
         return  os.path.join(self.net_dir, "word_tree_mapping.json")
     
     def best_word_match(self,wrd,dbg=False):
