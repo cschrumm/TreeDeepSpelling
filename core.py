@@ -462,7 +462,7 @@ def build_choose_and_train(wrl,dbg=False,out_cat=5):
             print("word ",v," category ",en)
       
     
-    for i in range(500):
+    for i in range(150):
         for en,v in enumerate(wrds):
             targ_arr.append(en)
             wd = word_mix(v)
