@@ -1,3 +1,8 @@
+# WARNING!
+
+This code is newly baked.. so you have been warned..  I will be doing a meetup so thought I'd publish before I'm completely happy
+with this code.
+
 # Deep Spelling Tree
 
 This is an experimental project where you can use deep learning to do spell checking on words.  
