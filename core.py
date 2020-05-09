@@ -50,7 +50,7 @@ class DeepSpellingChecker:
         save_json(dcMapping,file_path)
         
         self.mapp = dcMapping
-        return 
+        return  
     
     def mapping_file(self):
         return  os.path.join(self.net_dir, "word_tree_mapping.json")
@@ -68,7 +68,8 @@ class DeepSpellingChecker:
         
         if len(wd) > 1:
             srt = sorted(wd,key=lambda ky : jellyfish.damerau_levenshtein_distance(wrd,ky))
-            print("matches... ",srt)
+            if dbg:
+                print("matches... ",srt)
             return srt[0]
         else:
             return wd[0]
