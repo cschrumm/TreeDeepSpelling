@@ -64,7 +64,15 @@ class DeepSpellingChecker:
                 
         rt_name = "mdl_spelling"
         
-        return spell_word(wrd,rt_name,self.mapp,self.net_dir, dbg)
+        wd  = spell_word(wrd,rt_name,self.mapp,self.net_dir, dbg)
+        
+        if len(wd) > 1:
+            srt = sorted(wd,key=lambda ky : jellyfish.damerau_levenshtein_distance(wrd,ky))
+            print("matches... ",srt)
+            return srt[0]
+        else:
+            return wd[0]
+
 
     
 
@@ -413,7 +421,7 @@ def build_net_opt_schedule(out_cat=5):
     ntwrk = ImgNet(out_cat)
     ntwrk = best_move(ntwrk)
     optimizer = optim.Adadelta(ntwrk.parameters(), lr=0.80)
-    scheduler = StepLR(optimizer, step_size=1, gamma=0.97)
+    scheduler = StepLR(optimizer, step_size=1, gamma=0.96)
     
     return (ntwrk,optimizer,scheduler)
 
@@ -462,7 +470,7 @@ def build_choose_and_train(wrl,dbg=False,out_cat=5):
             print("word ",v," category ",en)
       
     
-    for i in range(150):
+    for i in range(250):
         for en,v in enumerate(wrds):
             targ_arr.append(en)
             wd = word_mix(v)
@@ -478,7 +486,7 @@ def build_choose_and_train(wrl,dbg=False,out_cat=5):
         
     tn_in, tn_trg  = np.stack(in_arr),np.array(targ_arr,dtype=np.long)
     
-    epoch = 3
+    epoch = 4
     
     # example_size = len(targ_arr)
     # example_indexes = [x for x in range(example_size)]
@@ -504,9 +512,9 @@ def build_choose_and_train(wrl,dbg=False,out_cat=5):
         in_arr = []
         targ_arr = []
         
-        epoch = 5
+        epoch = 4
     
-        for _ in range(100):
+        for _ in range(85):
             for i in range(out_cat):
                 #print("lenght list ",len(cat_list[i]))
                 lst = random.sample(cat_list[i], k=min(len(cat_list[i]),30))
@@ -640,7 +648,7 @@ def spell_word(wrd,ntwrk_name,mmp,dr, dbg=False):
     # load the network
     mdl = best_move(ImgNet(5))
        
-    fl =  os.path.join(dr, ntwrk_name) #dr + "/" + ntwrk_name + ".bin"
+    fl =  os.path.join(dr, (ntwrk_name  + ".bin")) #dr + "/" + ntwrk_name + ".bin"
     
     nt = torch.load(fl)
    
