@@ -72,7 +72,10 @@ class DeepSpellingChecker:
             return srt[0]
         else:
             return wd[0]
-
+        
+    def print_network_layout(self):
+        print(ImgNet(5))
+        return
 
     
 

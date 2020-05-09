@@ -72,7 +72,10 @@ class DeepSpellingChecker:
             return srt[0]
         else:
             return wd[0]
-
+        
+    def print_network_layout(self):
+        print(ImgNet(5))
+        return
 
     
 
@@ -561,7 +564,7 @@ def build_choose_and_train(wrl,dbg=False,out_cat=5):
 # avWords (instance of WordManage) contains the list of available words.
 # wdDic contains the chosen words root network choice
 # maxDepth
-def train_and_choose(rtTreeName, avWords, wdDic, maxDepth,pth=None):
+def train_and_choose(rtTreeName, avWords, wdDic, maxDepth,pth=None,dbg=False):
     '''
     
     '''
@@ -595,7 +598,8 @@ def train_and_choose(rtTreeName, avWords, wdDic, maxDepth,pth=None):
                 break
                 
         if stp:
-            print("not seperating for words .. ", all_wrds)
+            if dbg:
+                print("not seperating for words .. ", all_wrds)
             return
                 
         
