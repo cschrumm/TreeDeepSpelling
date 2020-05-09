@@ -584,7 +584,7 @@ def train_and_choose(rtTreeName, avWords, wdDic, maxDepth,pth=None):
         avWords.set_category(wrd,cat_w[i])
         
         
-    if len(all_wrds) < 5:
+    if len(all_wrds) < 15:
         vv = -1
         stp = True
         for w in cat_w:
