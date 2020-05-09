@@ -486,7 +486,7 @@ def build_choose_and_train(wrl,dbg=False,out_cat=5):
         
     tn_in, tn_trg  = np.stack(in_arr),np.array(targ_arr,dtype=np.long)
     
-    epoch = 6
+    epoch = 5
     
     # example_size = len(targ_arr)
     # example_indexes = [x for x in range(example_size)]
@@ -502,7 +502,7 @@ def build_choose_and_train(wrl,dbg=False,out_cat=5):
     # choose category based on the partially trained model..
     
     
-    for i in range(3):
+    for i in range(4):
         all_wrds = wrl.all_words()
         cat_w = get_category(model,all_wrds)
     
@@ -514,7 +514,7 @@ def build_choose_and_train(wrl,dbg=False,out_cat=5):
         
         epoch = 5
     
-        for _ in range(90):
+        for _ in range(125):
             for i in range(out_cat):
                 #print("lenght list ",len(cat_list[i]))
                 lst = random.sample(cat_list[i], k=min(len(cat_list[i]),30))
